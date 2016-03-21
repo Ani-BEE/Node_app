@@ -8,53 +8,50 @@ var ipaddr = process.env.OPENSHIFT_NODEJS_IP || "127.0.0.1";
 var port = process.env.OPENSHIFT_NODEJS_IP || 3000;
 
 function send404(response) {
-	response.writeHead(404, {'content-type': 'text/plain'});
-	response.write('Error 404: Resource not found.');
-	response.end();
+    response.writeHead(404, { 'Content-Type': 'text/plain' });
+    response.write('Error 404: Resource not found.');
+    response.end();
 }
 
 var mimeLookup = {
-	'.js': 'application/javascript',
-	'.html': 'text/html'
-}
+    '.js': 'application/javascript',
+    '.html': 'text/html'
+};
 
-var server = http.createServer(function (req, res){
+var server = http.createServer(function (req, res) {
 
-	if (req.method = 'GET'){
-		var fileurl;
-		if (req.url == '/'){
-			fileurl = '/index.html';
-		}
-		else {
-			fileurl = req.url;
-		}
-		var filepath = path.resolve('./public' + fileurl);
-		var fileExt = path.extname(filepath)
-		var mimeType = mimeLookup[fileExt];
+    if (req.method == 'GET') {
 
-		if (!mimeType){
-			//console.log('Point 1');
-			send404(res);
-			return;
-		}
+        // resolve file path to filesystem path
+        var fileurl;
+        if (req.url == '/') fileurl = '/index.html';
+        else fileurl = req.url;
+        var filepath = path.resolve('./public' + fileurl);
 
-		fs.exists(filepath, function(exists){
+        // lookup mime type
+        var fileExt = path.extname(filepath);
+        var mimeType = mimeLookup[fileExt];
+        if (!mimeType) {
+            send404(res);
+            return;
+        }
 
-			if (!exists){
-				//console.log('Point 2');
-				send404(res);
-				return;
-			};
+        // see if we have that file
+        fs.exists(filepath, function (exists) {
 
-			res.writeHead(200, {'content-type': mimeType});
-			fs.createReadStream(filepath).pipe(res);
-		});
+            // if not
+            if (!exists) {
+                send404(res);
+                return;
+            };
 
-
-	}
-	else{
-		//console.log('Point 3');
-		send404(res);
-	}
+            // finally stream the file
+            res.writeHead(200, { 'content-type': mimeType });
+            fs.createReadStream(filepath).pipe(res);
+        });
+    }
+    else {
+        send404(res);
+    }
 }).listen(port, ipaddr);
 util.log('Server running on port', port, 'and IP', ipaddr);
